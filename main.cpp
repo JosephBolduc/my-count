@@ -1,17 +1,22 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <fstream>
 #include <unistd.h> 
 #include <mutex>
 #include <sys/ipc.h>
 #include <sys/shm.h>
 
+#include <fileManager.h>
+#include <SharedMemoryManager.h>
+
 using std::string;
 using std::cout;
 using std::vector;
 
+// Fwd declares for file writing functions and other stuff
 vector<int>* parseInput(string fileName);
+void writeOutput(string fileName, vector<int>* data);
+
 void workerProcessLoop();
 
 int main(int argc, char* argv[])
@@ -23,7 +28,6 @@ int main(int argc, char* argv[])
         return -1;
     }
 
-    
 
     int arraySize = std::stoi(argv[1]);
     int coreCount = std::stoi(argv[2]);
@@ -42,13 +46,23 @@ int main(int argc, char* argv[])
         return -1;
     }
 
-    
-    
+    auto startingList = parseInput(inputFileName);
 
-    parseInput(inputFileName);
+    if(startingList->size() != arraySize)
+    {
+        cout << "The given array size does not match the input file!!\n";
+        exit(-1);
+    }
+
+	// Initialize via shared memory
+	SharedMemoryManager shared(startingList);
+	
+
+    writeOutput(outputFileName, startingList);
 
     key_t shmKey = ftok("countShm", 41);
     int shmId = shmget(shmKey, 1024, 0666 | IPC_CREAT);
+    
 
 
     // Creating the child processes
@@ -59,55 +73,12 @@ int main(int argc, char* argv[])
     }
 
     cout << "Pid of the process is " << getpid() << std::endl;
-    
-
-
 }
 
-// Reads the first line from the input file and loads numbers seperated by commas
-// Does not read past the first line
-vector<int>* parseInput(string fileName)
-{
-    string inputLine;
-    vector<int>* parsedContent = new vector<int>();
-
-    std::ifstream input;
-    input.open(fileName);
-
-    if(input.is_open()) getline(input, inputLine);
-    
-    
-    string parseBuffer = "";
-    for(size_t idx = 0; idx < inputLine.length(); idx++)
-    {
-        char current = inputLine[idx];
-        if(current == ' ' || current == ',')
-        {
-            try 
-            { 
-                if(parseBuffer != "") parsedContent->push_back(std::stoi(parseBuffer)); 
-            }
-            catch(const std::exception& e)
-            {
-                std::cerr << "Invalid character found. Seperate numbers using only spaces or commas!\n";
-            }
-            parseBuffer = "";
-        }
-        else parseBuffer += current;
-    }
-    
-
-    for (auto i = 0; i<parsedContent->size();i++)
-    {
-        int c = parsedContent->at(i);
-        cout << c << std::endl;
-    }
-    
-    
-    return parsedContent;
-}
 
 void workerProcessLoop()
 {
-
+    //TODO add the loop for the child processes. In the meantime, suicide
+    cout << "ending from inside child function\n";
+    exit(1);
 }
