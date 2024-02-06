@@ -1,5 +1,6 @@
 {
     "files.associations": {
+        "*.pl": "prolog",
         "array": "cpp",
         "atomic": "cpp",
         "bit": "cpp",
@@ -43,7 +44,16 @@
         "ostream": "cpp",
         "stdexcept": "cpp",
         "streambuf": "cpp",
-        "typeinfo": "cpp"
+        "typeinfo": "cpp",
+        "chrono": "cpp",
+        "condition_variable": "cpp",
+        "ctime": "cpp",
+        "ratio": "cpp",
+        "fstream": "cpp",
+        "mutex": "cpp",
+        "semaphore": "cpp",
+        "stop_token": "cpp",
+        "thread": "cpp"
     },
     "makefile.launchConfigurations": [
         {
@@ -51,5 +61,6 @@
             "binaryPath": "/home/joseph/projects/my-count/my-count",
             "binaryArgs": []
         }
-    ]
+    ],
+    "cmake.configureOnOpen": false
 }
