@@ -54,13 +54,9 @@ int main(int argc, char* argv[])
     // Creating the child processes
     for (int i = 0; i < coreCount; i++)
     {
+        // The children are sent off to the workerProcessLoop mines, never to be seen again
         if(fork() == 0) workerProcessLoop();
     }
-    
-
-
-
-    int fCheck = fork();
 
     cout << "Pid of the process is " << getpid() << std::endl;
     
