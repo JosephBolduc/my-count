@@ -14,9 +14,11 @@ using std::mutex;
 class SharedMemoryManager
 {
 private:
-    int* sourceArr;
-    int* destArr;
-    mutex* mutexArr;
+    int* sourceArr;     // ptr to the array of source values
+    int* destArr;       // ptr to the array of dest values, swaps with sourceArr every iteration
+    mutex* mutexArr;    // array of mutexes to avoid clobbering writes
+    bool* finishedArr;  // array to booleans to signal which array indices have finished, could be done by process to save memory but whatever
+
 
 public:
     int arraySize;
@@ -73,10 +75,18 @@ public:
         mutexArr[index].unlock();
     }
 
+    
+
+    // Swaps source and dest arrays, allowing for linear space complexity
+    void swapArrays()
+    {
+        int* temp = sourceArr;
+        sourceArr = destArr;
+        destArr = sourceArr;
+    }
+
     ~SharedMemoryManager()
     {
-        // TODO release any shared resources
-        // or do that from main
         shmdt(sourceArr);
         shmdt(destArr);
         shmdt(mutexArr);

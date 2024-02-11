@@ -5,7 +5,7 @@ CFLAGS = -Wall -Iinclude
 all: $(EXECUTABLE)
 
 $(EXECUTABLE): main.cpp fileManager.h SharedMemoryManager.h
-	$(CC) $(CFLAGS) $^ -o $@
+	$(CC) $(CFLAGS) $^ -o $@	
 
 clean:
 	rm -f $(EXECUTABLE)
