@@ -9,6 +9,7 @@
 #include <iostream>
 
 using std::string;
+using std::vector;
 
 // Each subprocess has a ref to this in shared memory
 // Each process can instantiate and make calls to this class which will handle shared memory and locking
@@ -17,24 +18,31 @@ class SharedMemoryManager
 private:
     int* sourceArr;     // ptr to the array of source values
     int* destArr;       // ptr to the array of dest values, swaps with sourceArr every iteration
-    pthread_mutex_t* mutexArr;    // array of mutexes to avoid clobbering writes
+    pthread_mutex_t* counterMutex; 
 
-    bool* finishedArr;  // array to booleans to signal which processes have finished, has one extra slot at the end for signaling
-    pthread_mutex_t* waitingRoomMutex;     // Synchronizes the processes waiting in the "waiting room"
-
+    
 
 public:
     int arraySize;
     int coreCount;
     int totalIterations;
+    int* finishedCounter;  // value to signal how many processess have finished, also set to negative value to signal finished to main
+    pthread_mutex_t* waitingRoomMutex;     // Avoids clobbering writes to the counter in the "waiting room"
 
     // Only called by the parent process to initialize the shared memory and set its size
-    SharedMemoryManager(int arraySize, int coreCount)
+    SharedMemoryManager(int arraySize, int coreCount, vector<int>* startingValues)
     {
         this->arraySize = arraySize;
         this->coreCount = coreCount;
         totalIterations = std::log2(arraySize);
         createOrGetShared();
+
+        for(int idx = 0; idx < arraySize; idx++)
+        {
+            sourceArr[idx] = startingValues->at(idx);
+            destArr[idx] = startingValues->at(idx);
+        }
+
     }
 
 
@@ -45,8 +53,8 @@ public:
         // A shared memory segments are allocated for the source and destination arrays and other stuff that needs to by synced
         static int sourceArrId;
         static int destArrId;
-        static int mutexArrId;
-        static int finishedArrId;
+        static int counterMutexId;
+        static int finishedCounterId;
         static int waitingRoomMutexId;
 
         if(sourceArrId == 0)
@@ -54,30 +62,30 @@ public:
             // Creaes the shared memory segment for various fields, partially sourced from provided sample code
             sourceArrId = shmget(IPC_PRIVATE, arraySize * sizeof(int), S_IRUSR | S_IWUSR);
             destArrId = shmget(IPC_PRIVATE, arraySize * sizeof(int), S_IRUSR | S_IWUSR);
-            mutexArrId = shmget(IPC_PRIVATE, arraySize * sizeof(pthread_mutex_t), S_IRUSR | S_IWUSR);
-            finishedArrId = shmget(IPC_PRIVATE, (coreCount + 1) * sizeof(bool), S_IRUSR | S_IWUSR);
+            counterMutexId = shmget(IPC_PRIVATE, sizeof(pthread_mutex_t), S_IRUSR | S_IWUSR);
+            finishedCounterId = shmget(IPC_PRIVATE, sizeof(int), S_IRUSR | S_IWUSR);
             waitingRoomMutexId = shmget(IPC_PRIVATE, sizeof(pthread_mutex_t), S_IRUSR | S_IWUSR);
         
             if (sourceArrId < 0 ||
                 destArrId < 0 ||
-                mutexArrId < 0 ||
-                finishedArrId < 0 ||
+                counterMutexId < 0 ||
+                finishedCounterId < 0 ||
                 waitingRoomMutexId < 0) throw std::exception();
         }
 
         sourceArr = (int*)shmat(sourceArrId, NULL, 0);
         destArr = (int*)shmat(destArrId, NULL, 0);
-        mutexArr = (pthread_mutex_t*)shmat(mutexArrId, NULL, 0);
-        finishedArr = (bool*)shmat(destArrId, NULL, 0);
-        waitingRoomMutex = static_cast<pthread_mutex_t*>( shmat(destArrId, NULL, 0));
+        counterMutex = (pthread_mutex_t*)shmat(counterMutexId, NULL, 0);
+        finishedCounter = (int*)shmat(finishedCounterId, NULL, 0);
+        waitingRoomMutex = (pthread_mutex_t*)shmat(waitingRoomMutexId, NULL, 0);
 
-        pthread_mutexattr_t attr;
-        pthread_mutexattr_init(&attr);
-        pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
-        pthread_mutex_init(waitingRoomMutex, &attr);
-        for(int idx = 0; idx < arraySize; idx++) pthread_mutex_init(&mutexArr[idx], &attr);
+        pthread_mutexattr_t mutexattr;
+        pthread_mutexattr_init(&mutexattr);
+        pthread_mutexattr_setpshared(&mutexattr, PTHREAD_PROCESS_SHARED);
+        pthread_mutex_init(waitingRoomMutex, &mutexattr);
+        pthread_mutex_init(counterMutex, &mutexattr);
 
-        
+        pthread_mutexattr_destroy(&mutexattr);
     }
 
     // Reading from the source array with check for bounds
@@ -87,68 +95,49 @@ public:
         return sourceArr[index];
     }
 
-    // Adds the given value to the number at index position while handling locking
+    // Adds the given value to the number at index position w/ bounds check
     void AddToDest(int index, int toAdd)
     {
+        std::cout << "adding " + std::to_string(toAdd) + " to index " + std::to_string(index) + "\n";
         if(index >= arraySize) throw std::exception();
-        pthread_mutex_lock(&mutexArr[index]);
-        destArr[index] += toAdd;
-        pthread_mutex_unlock(&mutexArr[index]);
-    }
-
-    // Method to handle writing from finished array from outside
-    // Not going to bother with mutexes because each process should only be writing to its own slot
-    void MarkFinished(int processSlot)
-    {
-        if (processSlot >= coreCount) throw std::exception();
-        finishedArr[processSlot] = true;
+        destArr[index] = sourceArr[index] + toAdd;
     }
 
     // Acts as a waiting room for the processes when finished with their assigned work for the iteration
-    // The one that finished first is responsible for checking on the rest while the others wait on the signal to go in a spinlock style wait
     void Wait()
     {
-        int lockStatus = pthread_mutex_trylock(waitingRoomMutex);
-        std::cout << "lock status" + std::to_string(lockStatus) + "\n";
-        if(lockStatus)
+        // avoid writing over the counter
+        pthread_mutex_lock(counterMutex);
+        if(*finishedCounter == coreCount - 1) 
         {
-            std::cout << "locking sync mut!!\n";
-            finishedArr[coreCount] = false;
-            bool allFinished;
-            do
-            {
-                allFinished = true;
-                for (int idx = 0; idx < coreCount; idx++) allFinished = allFinished && finishedArr[idx];
-            }
-            while (!allFinished);
-
-            // Every process should be done by here
-            for (int idx = 0; idx < coreCount; idx++) finishedArr[idx] = false;
+            std::cout << "moving to next iteration\n";
             swapArrays();
-            finishedArr[coreCount] = true;
-            pthread_mutex_unlock(waitingRoomMutex);
+            pthread_mutex_unlock(counterMutex);
+            *finishedCounter = 0;
+            return;
         }
+        (*finishedCounter)++;
+        pthread_mutex_unlock(counterMutex);
+        
 
-        else
-        {
-            while(true) for(int idx = 0; idx < coreCount; idx++) if(finishedArr[coreCount]) return;
-        }
+        while(*finishedCounter > 0) continue;
 
     }
 
 
-    // Swaps source and dest arrays, allowing for linear space complexity
+    // Doesn't actually swap arrays anymore but copies dest into source
     void swapArrays()
     {
-        int* temp = sourceArr;
-        sourceArr = destArr;
-        destArr = sourceArr;
+        std::cout << "arrays swapped!\n";
+        for(int i = 0; i<arraySize; i++) sourceArr[i] = destArr[i];
     }
 
     ~SharedMemoryManager()
     {
         shmdt(sourceArr);
         shmdt(destArr);
-        shmdt(mutexArr);
+        shmdt(counterMutex);
+        shmdt(finishedCounter);
+        shmdt(waitingRoomMutex);
     }
 };

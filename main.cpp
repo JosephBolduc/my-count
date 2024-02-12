@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
         exit(-1);
     }
 
-    SharedMemoryManager* shared = new SharedMemoryManager(startingList->size(), coreCount);
+    SharedMemoryManager* shared = new SharedMemoryManager(startingList->size(), coreCount, startingList);
 
     // Assigning work to each process by indexes of the array they will handle
     vector<vector<int>*> workAssignment;
@@ -64,6 +64,10 @@ int main(int argc, char *argv[])
     // Creating the child processes
     for (int core = 0; core < coreCount; core++)
     {
+
+        // TESTING MATERIAL
+        if (core == 0) continue;
+
         // The children are sent off to the workerProcessLoop mines, never to be seen again
         if (fork() != 0) 
         {
@@ -71,14 +75,21 @@ int main(int argc, char *argv[])
         }
     }
 
+    // TESTING MATERIAL
+    if(fork() != 0) workerProcessLoop(shared, workAssignment[0], 0);
+
+
+    // Waiting for the output
+    int* counterAddress = shared->finishedCounter;
+    while(*counterAddress >= 0) continue;
 
     vector<int> output;
     for(int idx = 0; idx < arraySize; idx++)
     {
         output.push_back(shared->ReadFromSource(idx));
     }
-
-    cout << "Pid of the process is " << getpid() << std::endl;
+    writeOutput(outputFileName, &output);
+    cout << "End of main!" << std::endl;
 }
 
 void workerProcessLoop(SharedMemoryManager* shared, vector<int>* workAssigned, int id)
@@ -90,29 +101,27 @@ void workerProcessLoop(SharedMemoryManager* shared, vector<int>* workAssigned, i
 
     // TODO add the loop for the child processes. In the meantime, suicide
     // Tracks each iteration on its own, synchonizing through the shared object
-    for (int iteration = 0; iteration <= shared->totalIterations; iteration++)
+    for (int iteration = 0; iteration < shared->totalIterations; iteration++)
     {
         // Does work for each array index assigned
         for(int workIdx = 0; workIdx < workAssigned->size(); workIdx++)
         {
             int arrIdx = workAssigned->at(workIdx);
-            if(arrIdx >= std::exp2(iteration))
+            if(arrIdx < std::exp2(iteration))
+            {
+                shared->AddToDest(arrIdx, 0);
+            }
+            else
             {
                 int toAdd = shared->ReadFromSource(arrIdx - std::exp2(iteration));
                 shared->AddToDest(arrIdx, toAdd);
             }
+            
         }
-
-        shared->MarkFinished(id);
         shared->Wait();
-
-
-
-        if (iteration == shared->totalIterations)
-        {
-            cout << "ending from inside child function\n";
-            delete shared;
-            exit(0);
-        }
     }
+    *(shared->finishedCounter) = -1;
+    cout << "ending from inside child function\n";
+    delete shared;
+    exit(0);
 }
