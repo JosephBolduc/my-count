@@ -1,11 +1,11 @@
 CC = g++
 EXECUTABLE = my-count
-CFLAGS = -Wall -Iinclude
+CFLAGS = -Iinclude -std=c++1y -pthread
 
 all: $(EXECUTABLE)
 
-$(EXECUTABLE): main.cpp fileManager.h SharedMemoryManager.h
-	$(CC) $(CFLAGS) $^ -o $@
+$(EXECUTABLE): my-count.cpp fileParser.h MemoryManager.h workerProcess.h
+	$(CC) $(CFLAGS) $^ -o $@	
 
 clean:
 	rm -f $(EXECUTABLE)

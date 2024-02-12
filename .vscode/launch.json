@@ -5,7 +5,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${fileDirname}/${fileBasenameNoExtension}",
-            "args": ["5", "3", "sampleIn.txt", "sampleOut.txt"],
+            "args": ["2", "3", "A.txt", "B.txt"],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
             "environment": [],
