@@ -1,3 +1,0 @@
-1, 1, 1, 1, 1
-Other lines in the file are ignored
-Numbers should be seperated by spaces or commas
