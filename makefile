@@ -1,6 +1,6 @@
 CC = g++
 EXECUTABLE = my-count
-CFLAGS = -Wall -Iinclude
+CFLAGS = -Wall -Iinclude -std=c++20
 
 all: $(EXECUTABLE)
 

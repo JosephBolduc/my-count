@@ -2,9 +2,7 @@
 #include <string>
 #include <vector>
 #include <unistd.h>
-#include <mutex>
 #include <math.h>
-
 #include "fileManager.h"
 #include "SharedMemoryManager.h"
 
@@ -13,7 +11,7 @@ using std::string;
 using std::vector;
 
 // Fwd declares for file writing functions and other stuff
-void workerProcessLoop(SharedMemoryManager* shared, vector<int>* work);
+void workerProcessLoop(SharedMemoryManager* shared, vector<int>* work, int id);
 
 int main(int argc, char *argv[])
 {
@@ -50,7 +48,7 @@ int main(int argc, char *argv[])
         exit(-1);
     }
 
-    SharedMemoryManager* shared = new SharedMemoryManager(startingList->size());
+    SharedMemoryManager* shared = new SharedMemoryManager(startingList->size(), coreCount);
 
     // Assigning work to each process by indexes of the array they will handle
     vector<vector<int>*> workAssignment;
@@ -67,9 +65,9 @@ int main(int argc, char *argv[])
     for (int core = 0; core < coreCount; core++)
     {
         // The children are sent off to the workerProcessLoop mines, never to be seen again
-        if (fork() == 0) 
+        if (fork() != 0) 
         {
-            workerProcessLoop(shared, workAssignment[core]);
+            workerProcessLoop(shared, workAssignment[core], core);
         }
     }
 
@@ -83,11 +81,12 @@ int main(int argc, char *argv[])
     cout << "Pid of the process is " << getpid() << std::endl;
 }
 
-void workerProcessLoop(SharedMemoryManager* shared, vector<int>* workAssigned)
+void workerProcessLoop(SharedMemoryManager* shared, vector<int>* workAssigned, int id)
 {
     string asdna = "work assigned: ";
     for(int i=0; i<workAssigned->size(); i++) {asdna += std::to_string(workAssigned->at(i)) + " ";}
     cout << asdna << std::endl;
+
 
     // TODO add the loop for the child processes. In the meantime, suicide
     // Tracks each iteration on its own, synchonizing through the shared object
@@ -102,16 +101,14 @@ void workerProcessLoop(SharedMemoryManager* shared, vector<int>* workAssigned)
                 int toAdd = shared->ReadFromSource(arrIdx - std::exp2(iteration));
                 shared->AddToDest(arrIdx, toAdd);
             }
-
-
-
-
-
         }
 
+        shared->MarkFinished(id);
+        shared->Wait();
 
 
-        if (true)
+
+        if (iteration == shared->totalIterations)
         {
             cout << "ending from inside child function\n";
             delete shared;
