@@ -28,9 +28,9 @@ public:
     int *finishedCounter; // The fake counting semaphore being used
 
     // Only to called by the parent process to initialize the shared memory and set its size and starting array
-    MemoryManager(int coreCount, vector<int> *startingValues)
+    MemoryManager(int coreCount, vector<int> *startingValues, int size)
     {
-        arraySize = startingValues->size();
+        arraySize = size;
         this->coreCount = coreCount;
         totalIterations = log2(arraySize);
 
