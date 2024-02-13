@@ -10,13 +10,18 @@ using std::cout;
 using std::string;
 using std::vector;
 
+/*
+Not allowed on cs1
 void cleanup() {system("pkill -f my-count");}
 void handler(int signo) {exit(-1);}
+*/
+
 
 int main(int argc, char *argv[])
 {
-    atexit(cleanup);
-    signal(SIGTERM, handler);
+    // Not allowed on cs1
+    // atexit(cleanup);
+    // signal(SIGTERM, handler);
 
     // Checking if the correct amount of arguments was given
     if (argc != 5)
@@ -71,7 +76,7 @@ int main(int argc, char *argv[])
 
     // Creating the memory manager and worker processes
     MemoryManager* shared = new MemoryManager(coreCount, startingList, arraySize);
-    for(int core = 0; core < coreCount; core++) if(fork() != 0 ) workerProcess(workAssignment.at(core), shared);
+    for(int core = 0; core < coreCount; core++) if(fork() == 0 ) workerProcess(workAssignment.at(core), shared);
     
     // Spinlock style wait for the processes to finish
     while(true) if (*(shared->finishedCounter) == -1) break;

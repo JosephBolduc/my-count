@@ -1,4 +1,4 @@
-#include <vector>
+    #include <vector>
 #include <math.h>
 #include <sys/shm.h>
 #include <sys/stat.h>
@@ -86,6 +86,13 @@ public:
     {
         // Checks if all other processes have passed through
         pthread_mutex_lock(counterMutex);
+        if(*finishedCounter == -1)
+        {
+            pthread_mutex_unlock(counterMutex);
+            exit(0);
+        }
+
+
         if (*finishedCounter == coreCount - 1)
         {
             swapArrays();
@@ -98,8 +105,10 @@ public:
         pthread_mutex_unlock(counterMutex);
         // Spinlock style wait for the other processes
         while (true)
-            if (*finishedCounter == 0)
-                return;
+        {
+            if (*finishedCounter == -1) exit(0);        
+            if (*finishedCounter == 0) return;
+        }
     }
 
     // Swaps arrays to keep linear space complexity

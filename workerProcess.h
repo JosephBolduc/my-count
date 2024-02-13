@@ -13,6 +13,7 @@ void workerProcess(const vector<int> *workAssignment, MemoryManager *shared)
     // Each processes tracks the iteration on its own
     for (int iteration = 0; iteration <= shared->totalIterations; iteration++)
     {
+        if(*(shared->finishedCounter) == -1) exit(0);
         int twoI = exp2(iteration);
         // Loops through all the work assigned, done at least partially in parallel
         for (int workIdx = 0; workIdx < workAssignment->size(); workIdx++)

@@ -5,7 +5,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${fileDirname}/${fileBasenameNoExtension}",
-            "args": ["2", "3", "A.txt", "B.txt"],
+            "args": ["10", "3", "A.txt", "B.txt"],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
             "environment": [],
