@@ -1,8 +1,6 @@
 #include <string>
 #include <vector>
 #include <unistd.h>
-#include <stdlib.h>
-#include <signal.h>
 #include "fileParser.h"
 #include "workerProcess.h"
 
@@ -10,19 +8,8 @@ using std::cout;
 using std::string;
 using std::vector;
 
-/*
-Not allowed on cs1
-void cleanup() {system("pkill -f my-count");}
-void handler(int signo) {exit(-1);}
-*/
-
-
 int main(int argc, char *argv[])
 {
-    // Not allowed on cs1
-    // atexit(cleanup);
-    // signal(SIGTERM, handler);
-
     // Checking if the correct amount of arguments was given
     if (argc != 5)
     {

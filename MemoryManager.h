@@ -1,4 +1,4 @@
-    #include <vector>
+#include <vector>
 #include <math.h>
 #include <sys/shm.h>
 #include <sys/stat.h>
@@ -19,7 +19,6 @@ private:
     int destArrId;
     int finCtrId;
     int finCtrMutexId;
-
 
 public:
     int arraySize;
@@ -86,12 +85,11 @@ public:
     {
         // Checks if all other processes have passed through
         pthread_mutex_lock(counterMutex);
-        if(*finishedCounter == -1)
+        if (*finishedCounter == -1)
         {
             pthread_mutex_unlock(counterMutex);
             exit(0);
         }
-
 
         if (*finishedCounter == coreCount - 1)
         {
@@ -106,7 +104,7 @@ public:
         // Spinlock style wait for the other processes
         while (true)
         {
-            if (*finishedCounter == -1) exit(0);        
+            if (*finishedCounter == -1) exit(0);
             if (*finishedCounter == 0) return;
         }
     }
@@ -114,17 +112,17 @@ public:
     // Swaps arrays to keep linear space complexity
     void swapArrays()
     {
-        for (int i = 0; i < arraySize; i++)
-            srcArr[i] = destArr[i];
+        for (int i = 0; i < arraySize; i++) srcArr[i] = destArr[i];
     }
 
+    // Detaching from shared memory, also deletes it from the main process
     void Deallocate(bool del)
     {
         shmdt(srcArr);
         shmdt(destArr);
         shmdt(counterMutex);
         shmdt(finishedCounter);
-        if(!del) return;
+        if (!del) return;
         shmctl(sourceArrId, IPC_RMID, NULL);
         shmctl(destArrId, IPC_RMID, NULL);
         shmctl(finCtrId, IPC_RMID, NULL);
