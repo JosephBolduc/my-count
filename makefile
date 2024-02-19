@@ -1,6 +1,6 @@
 CC = g++
 EXECUTABLE = my-count
-CFLAGS = -Iinclude -std=c++1y -pthread
+CFLAGS = -std=c++1y -o0
 
 all: $(EXECUTABLE)
 

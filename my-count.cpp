@@ -94,7 +94,6 @@ int main(int argc, char *argv[])
     
     // Spinlock style wait for the processes to finish
     while(true) if(counterPtr->load() == coreCount * (totalIterations + 1)) break;
-    cout << "dont with thingy\n";
     
     // Reading the output and writing to file
     vector<int> output;
@@ -180,8 +179,6 @@ void workerProcess(const vector<int> *workAssignment)
             }
         }
 
-        cout << "before add, counter is at " << counterPtr->load() << " and the iteration is " << iteration << "\n";
-        cout << "iteration +1 * corecount is " << (iteration + 1) * coreCount << "\n";
         counterPtr->fetch_add(1);
         while(true)
         {
