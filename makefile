@@ -1,6 +1,6 @@
 CC = g++
 EXECUTABLE = my-count
-CFLAGS = -std=c++1y -o0
+CFLAGS = -std=c++1y -o3
 
 all: $(EXECUTABLE)
 

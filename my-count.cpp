@@ -18,16 +18,14 @@ void writeOutput(const string& fileName, vector<int>* dataList);
 void workerProcess(vector<int> workAssignment);
 void allocateSharedMemory(int arraySize);
 
+// Pointers to things in shared memory
 int shmId;
 void* baseShmPtr;
-
-// Pointers to the start of the arrays in shared memory
 int* arrayAPtr;
 int* arrayBPtr;
-
-// Pointer to the counter in shared memory
 atomic<int>* counterPtr;
 
+// Other misc information that the subprocesses need
 int totalIterations;
 int coreCount;
 
@@ -40,7 +38,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    // This style of inputs is probably at least a little vulnurable to buffer overflows so please don't hurt me
+    // Reading the cmd inputs
     int arraySize = std::stoi(argv[1]);
     coreCount = std::stoi(argv[2]);
     string inputFileName = argv[3];
@@ -162,10 +160,11 @@ void workerProcess(const vector<int> workAssignment)
     for (int iteration = 0; iteration <= totalIterations; iteration++)
     {
         int twoI = exp2(iteration);
+        bool AtoB = iteration % 2 == 0;
         // Loops through all the work assigned, done at least partially in parallel
         for (int arrIdx : workAssignment)
         {
-            if(iteration % 2 == 0)
+            if(AtoB)
             {
                 if(arrIdx < twoI) arrayBPtr[arrIdx] = arrayAPtr[arrIdx];
                 else arrayBPtr[arrIdx] = arrayAPtr[arrIdx] + arrayAPtr[arrIdx - twoI];
@@ -178,11 +177,7 @@ void workerProcess(const vector<int> workAssignment)
         }
 
         counterPtr->fetch_add(1);
-        while(true)
-        {
-
-            if(counterPtr->load() >= (iteration + 1) * coreCount) break;
-        }
+        while(true) if(counterPtr->load() >= (iteration + 1) * coreCount) break;
     }
     exit(0);
 }
