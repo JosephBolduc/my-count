@@ -16,7 +16,7 @@ using std::atomic;
 
 vector<int>* parseInput(string fileName);
 void writeOutput(string fileName, vector<int>* dataList);
-void workerProcess(const vector<int> *workAssignment);
+void workerProcess(const vector<int> workAssignment);
 void allocateSharedMemory(int arraySize);
 
 int shmId;
@@ -75,12 +75,12 @@ int main(int argc, char *argv[])
     }
 
     // Assigning work to each process by indexes of the array they will handle
-    vector<vector<int>*> workAssignment;
-    for(int i=0; i<coreCount; i++) workAssignment.push_back(new vector<int>());
+    vector<vector<int>> workAssignment;
+    for(int i=0; i<coreCount; i++) workAssignment.push_back(vector<int>());
     int currentProcess = 0;
     for(int targetIndex = 0; targetIndex < arraySize; targetIndex++)
     {
-        workAssignment[currentProcess]->push_back(targetIndex);
+        workAssignment[currentProcess].push_back(targetIndex);
         currentProcess++;
         if(currentProcess >= coreCount) currentProcess = 0;
     }
@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
     for (int i = 0; i < arraySize; i++) arrayAPtr[i] = startingList->at(i);
 
     // Creating the worker processes
-    for(int core = 0; core < coreCount; core++) if(fork() != 0 ) workerProcess(workAssignment.at(core));
+    for(int core = 0; core < coreCount; core++) if(fork() == 0 ) workerProcess(workAssignment.at(core));
     
     // Spinlock style wait for the processes to finish
     while(true) if(counterPtr->load() == coreCount * (totalIterations + 1)) break;
@@ -157,16 +157,16 @@ void allocateSharedMemory(int arraySize)
     counterPtr = (atomic<int>*)(baseShmPtr + 2 * (arraySize) * sizeof(int) + 1);
 }
 
-void workerProcess(const vector<int> *workAssignment)
+void workerProcess(const vector<int> workAssignment)
 {
     // Each processes tracks the iteration on its own
     for (int iteration = 0; iteration <= totalIterations; iteration++)
     {
         int twoI = exp2(iteration);
         // Loops through all the work assigned, done at least partially in parallel
-        for (int workIdx = 0; workIdx < workAssignment->size(); workIdx++)
+        for (int workIdx = 0; workIdx < workAssignment.size(); workIdx++)
         {
-            int arrIdx = workAssignment->at(workIdx);
+            int arrIdx = workAssignment.at(workIdx);
             if(iteration % 2 == 0)
             {
                 if(arrIdx < twoI) arrayBPtr[arrIdx] = arrayAPtr[arrIdx];
