@@ -4,7 +4,7 @@ CFLAGS = -Iinclude -std=c++1y -pthread
 
 all: $(EXECUTABLE)
 
-$(EXECUTABLE): my-count.cpp fileParser.h MemoryManager.h workerProcess.h
+$(EXECUTABLE): my-count.cpp
 	$(CC) $(CFLAGS) $^ -o $@	
 
 clean:
