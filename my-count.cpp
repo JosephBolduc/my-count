@@ -1,8 +1,7 @@
 #include <string>
 #include <vector>
 #include <unistd.h>
-#include <math.h>
-#include <stdlib.h>
+#include <cmath>
 #include <iostream>
 #include <fstream>
 #include <sys/shm.h>
@@ -14,9 +13,9 @@ using std::string;
 using std::vector;
 using std::atomic;
 
-vector<int>* parseInput(string fileName);
-void writeOutput(string fileName, vector<int>* dataList);
-void workerProcess(const vector<int> workAssignment);
+vector<int>* parseInput(const string& fileName);
+void writeOutput(const string& fileName, vector<int>* dataList);
+void workerProcess(vector<int> workAssignment);
 void allocateSharedMemory(int arraySize);
 
 int shmId;
@@ -105,11 +104,11 @@ int main(int argc, char *argv[])
     writeOutput(outputFileName, &output);
 
     shmdt(baseShmPtr);
-    shmctl(shmId, IPC_RMID, NULL);
+    shmctl(shmId, IPC_RMID, nullptr);
 }
 
 // Reads all values from the given filename, seperated by line
-vector<int>* parseInput(string fileName)
+vector<int>* parseInput(const string& fileName)
 {
     string inputLine;
     vector<int>* parsedContent = new vector<int>();
@@ -121,7 +120,7 @@ vector<int>* parseInput(string fileName)
         while (getline(input, inputLine)){
             try
             {
-                if(inputLine != "") parsedContent->push_back(std::stoi(inputLine));
+                if(!inputLine.empty()) parsedContent->push_back(std::stoi(inputLine));
             }
             catch(const std::exception& e)
             {
@@ -134,7 +133,7 @@ vector<int>* parseInput(string fileName)
 }
 
 // Writes the content of the final array to file
-void writeOutput(string fileName, vector<int>* dataList)
+void writeOutput(const string& fileName, vector<int>* dataList)
 {
     string out = "";
     for (int data : *dataList)
@@ -151,10 +150,10 @@ void allocateSharedMemory(int arraySize)
 {
     int sizeOfShm = (2 * arraySize + 1);
     shmId = shmget(IPC_PRIVATE, sizeOfShm * sizeof(int), S_IRUSR | S_IWUSR);
-    baseShmPtr = shmat(shmId, NULL, 0);
-    arrayAPtr = (int*)baseShmPtr;
-    arrayBPtr = (int*)(baseShmPtr + arraySize * sizeof(int));
-    counterPtr = (atomic<int>*)(baseShmPtr + 2 * (arraySize) * sizeof(int) + 1);
+    baseShmPtr = shmat(shmId, nullptr, 0);
+    arrayAPtr = static_cast<int *>(baseShmPtr);
+    arrayBPtr = static_cast<int *>(baseShmPtr + arraySize * sizeof(int));
+    counterPtr = static_cast<atomic<int> *>(baseShmPtr + 2 * (arraySize) * sizeof(int) + 1);
 }
 
 void workerProcess(const vector<int> workAssignment)
@@ -164,9 +163,8 @@ void workerProcess(const vector<int> workAssignment)
     {
         int twoI = exp2(iteration);
         // Loops through all the work assigned, done at least partially in parallel
-        for (int workIdx = 0; workIdx < workAssignment.size(); workIdx++)
+        for (int arrIdx : workAssignment)
         {
-            int arrIdx = workAssignment.at(workIdx);
             if(iteration % 2 == 0)
             {
                 if(arrIdx < twoI) arrayBPtr[arrIdx] = arrayAPtr[arrIdx];
