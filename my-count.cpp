@@ -144,6 +144,7 @@ void writeOutput(const string& fileName, vector<int>* dataList)
     output.close();
 }
 
+// Gets a shared memory segment and gets pointers to where the arrays and counter goes
 void allocateSharedMemory(int arraySize)
 {
     int sizeOfShm = (2 * arraySize + 1);
@@ -154,6 +155,7 @@ void allocateSharedMemory(int arraySize)
     counterPtr = static_cast<atomic<int> *>(baseShmPtr + 2 * (arraySize) * sizeof(int) + 1);
 }
 
+// Called by the child processes to do the calculations in parallel
 void workerProcess(const vector<int> workAssignment)
 {
     // Each processes tracks the iteration on its own
